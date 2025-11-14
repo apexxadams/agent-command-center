@@ -3,6 +3,7 @@ import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime
+import requests
 
 st.set_page_config(
     page_title="ApexxAdams Command Center",
@@ -75,24 +76,35 @@ def load_cora_data():
             sheet = client.open_by_key(sheet_id).sheet1
             data = sheet.get_all_records()
             df = pd.DataFrame(data)
-            
-            # Rename columns to lowercase for consistency
             df.columns = df.columns.str.lower().str.replace(' ', '_')
-            
             return df
         return pd.DataFrame()
     except Exception as e:
         st.error(f"Error loading data: {e}")
         return pd.DataFrame()
 
-@st.cache_data(ttl=300)
+def create_opsi_task(task_data):
+    webhook_url = "https://hackett2k.app.n8n.cloud/webhook/opsi-create-task"
+    try:
+        response = requests.post(webhook_url, json=task_data)
+        return response.json()
+    except Exception as e:
+        st.error(f"Error creating task: {e}")
+        return None
+
+@st.cache_data(ttl=60)
 def load_opsi_data():
-    return pd.DataFrame({
-        'task': ['Grant Application - City of Austin', 'RFP Review - Charlotte', 'Compliance Audit Q4'],
-        'due_date': ['2025-11-05', '2025-11-12', '2025-11-30'],
-        'priority': ['High', 'Medium', 'Low'],
-        'status': ['In Progress', 'Not Started', 'Not Started']
-    })
+    try:
+        client = connect_to_sheets()
+        if client:
+            sheet_id = "1kt4z_zcfiX_Xx3jhahihWMB5LMrh0-GpmQDBxKjSl4A"
+            sheet = client.open_by_key(sheet_id).sheet1
+            data = sheet.get_all_records()
+            return pd.DataFrame(data)
+        return pd.DataFrame()
+    except Exception as e:
+        st.error(f"Error loading OPSI data: {e}")
+        return pd.DataFrame()
 
 st.markdown('<p class="main-header">ApexxAdams Command Center</p>', unsafe_allow_html=True)
 st.write("Multi-Agent System Dashboard - CORA | MARK | OPSI")
@@ -107,7 +119,7 @@ with col1:
 with col2:
     st.markdown('<span class="status-idle">MARK</span>', unsafe_allow_html=True)
 with col3:
-    st.markdown('<span class="status-offline">OPSI</span>', unsafe_allow_html=True)
+    st.markdown('<span class="status-active">OPSI</span>', unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
 
@@ -141,7 +153,7 @@ if selected_agent == "Dashboard Overview":
         st.metric("Active Campaigns (MARK)", "Coming Soon")
     
     with col3:
-        pending_tasks = len(opsi_df[opsi_df['status'] == 'Not Started']) if not opsi_df.empty else 0
+        pending_tasks = len(opsi_df[opsi_df['Status '] == 'New']) if not opsi_df.empty else 0
         st.metric("Pending Tasks (OPSI)", pending_tasks)
     
     with col4:
@@ -177,10 +189,10 @@ if selected_agent == "Dashboard Overview":
         <div class="agent-card">
             <h3>OPSI</h3>
             <p>Operations & Policy System</p>
-            <p><strong>Status:</strong> <span class="status-offline">Coming Soon</span></p>
-            <p><strong>Tasks:</strong> 0</p>
+            <p><strong>Status:</strong> <span class="status-active">Active</span></p>
+            <p><strong>Tasks:</strong> {}</p>
         </div>
-        """, unsafe_allow_html=True)
+        """.format(len(opsi_df) if not opsi_df.empty else 0), unsafe_allow_html=True)
     
     st.markdown("---")
     
@@ -197,7 +209,9 @@ if selected_agent == "Dashboard Overview":
     with col2:
         st.subheader("OPSI Upcoming Tasks")
         if not opsi_df.empty:
-            st.dataframe(opsi_df[['task', 'due_date', 'priority']], use_container_width=True, hide_index=True)
+            display_cols = ['Title', 'Deadline Date', 'Priority ']
+            available_cols = [col for col in display_cols if col in opsi_df.columns]
+            st.dataframe(opsi_df[available_cols].head(5), use_container_width=True, hide_index=True)
         else:
             st.info("No tasks scheduled.")
 
@@ -313,21 +327,55 @@ elif selected_agent == "OPSI (Operations)":
     
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("Pending Tasks", len(opsi_df[opsi_df['status'] == 'Not Started']))
+        pending = len(opsi_df[opsi_df['Status '] == 'New']) if not opsi_df.empty else 0
+        st.metric("Pending Tasks", pending)
     with col2:
-        st.metric("In Progress", len(opsi_df[opsi_df['status'] == 'In Progress']))
+        in_progress = len(opsi_df[opsi_df['Status '] == 'In Progress']) if not opsi_df.empty else 0
+        st.metric("In Progress", in_progress)
     with col3:
-        high_priority = len(opsi_df[opsi_df['priority'] == 'High'])
-        st.metric("High Priority", high_priority)
+        high = len(opsi_df[opsi_df['Priority '] == 'High']) if not opsi_df.empty else 0
+        st.metric("High Priority", high)
     with col4:
-        st.metric("Compliance Score", "94%")
+        st.metric("Total Tasks", len(opsi_df))
     
     st.markdown("---")
     
-    st.subheader("Active Tasks")
-    st.dataframe(opsi_df, use_container_width=True, hide_index=True)
+    with st.expander("➕ Create New Task"):
+        with st.form("new_task_form"):
+            title = st.text_input("Task Title*")
+            task_type = st.selectbox("Task Type", ["RFP Submission", "Contract Renewal", "Audit", "Compliance Report"])
+            assigned_to = st.text_input("Assigned To", "J Hackett")
+            deadline = st.date_input("Deadline Date")
+            priority = st.selectbox("Priority", ["High", "Medium", "Low"])
+            notes = st.text_area("Notes")
+            
+            submitted = st.form_submit_button("Create Task")
+            
+            if submitted:
+                if title:
+                    task_data = {
+                        "title": title,
+                        "taskType": task_type,
+                        "assignedTo": assigned_to,
+                        "deadline": str(deadline),
+                        "priority": priority,
+                        "notes": notes
+                    }
+                    result = create_opsi_task(task_data)
+                    if result:
+                        st.success(f"✅ Task created: {result.get('taskId')}")
+                        st.cache_data.clear()
+                        st.rerun()
+                else:
+                    st.error("Title is required")
     
-    st.info("OPSI is coming soon! This will track grants, RFPs, and compliance deadlines.")
+    st.markdown("---")
+    st.subheader("Active Tasks")
+    
+    if not opsi_df.empty:
+        st.dataframe(opsi_df, use_container_width=True, hide_index=True)
+    else:
+        st.info("No tasks yet. Create your first task above.")
 
 st.markdown("---")
 st.markdown(
