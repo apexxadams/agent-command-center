@@ -3,6 +3,7 @@ import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
 import requests
+from datetime import datetime
 
 # ========================================
 # GOOGLE SHEETS CONNECTION
@@ -44,6 +45,22 @@ def load_cora_data():
         st.error(f"❌ Error loading CORA data: {e}")
         return pd.DataFrame()
 
+def send_approved_leads_to_mark(lead_ids):
+    """Send approved Lead IDs to MARK webhook"""
+    webhook_url = "https://hackett2k.app.n8n.cloud/webhook/mark-approve-leads"
+    
+    payload = {
+        "approved_leads": lead_ids,
+        "approved_by": "Dashboard User",
+        "timestamp": datetime.now().isoformat()
+    }
+    
+    try:
+        response = requests.post(webhook_url, json=payload, timeout=10)
+        return response.status_code == 200, response
+    except Exception as e:
+        return False, str(e)
+
 # ========================================
 # OPSI DATA FUNCTIONS
 # ========================================
@@ -78,17 +95,3 @@ def send_opsi_task(task_data):
     except Exception as e:
         st.error(f"❌ Error sending OPSI task: {e}")
         return None
-
-# ========================================
-# MARK WEBHOOK FUNCTIONS
-# ========================================
-
-def send_to_mark_webhook(payload):
-    """Send data to MARK agent webhook"""
-    webhook_url = "https://hackett2k.app.n8n.cloud/webhook/mark-approve-leads"
-    
-    try:
-        response = requests.post(webhook_url, json=payload, timeout=10)
-        return response.status_code == 200, response
-    except Exception as e:
-        return False, str(e)
