@@ -95,3 +95,33 @@ def send_opsi_task(task_data):
     except Exception as e:
         st.error(f"❌ Error sending OPSI task: {e}")
         return None
+
+def update_opsi_task(update_data):
+    """Update existing OPSI task via n8n webhook"""
+    webhook_url = "https://hackett2k.app.n8n.cloud/webhook/opsi-update-task"
+    
+    try:
+        response = requests.post(webhook_url, json=update_data, timeout=10)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            st.error(f"❌ OPSI update webhook error: {response.status_code}")
+            return None
+    except Exception as e:
+        st.error(f"❌ Error updating OPSI task: {e}")
+        return None
+
+def update_opsi_task(update_data):
+    """Update existing OPSI task via n8n webhook"""
+    webhook_url = "https://hackett2k.app.n8n.cloud/webhook/opsi-update-task"
+    
+    try:
+        response = requests.post(webhook_url, json=update_data, timeout=10)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            st.error(f"❌ OPSI update webhook error: {response.status_code}")
+            return None
+    except Exception as e:
+        st.error(f"❌ Error updating OPSI task: {e}")
+        return None
