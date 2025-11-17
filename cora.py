@@ -3,6 +3,16 @@ import pandas as pd
 from utils import load_cora_data
 from datetime import datetime
 
+def get_cora_status():
+    return "Active"
+
+def get_cora_leads():
+    try:
+        df = load_cora_data()
+        return df.to_dict('records') if not df.empty else []
+    except:
+        return []
+
 def cora_page():
     st.header("CORA - Lead Generation Dashboard")
 
