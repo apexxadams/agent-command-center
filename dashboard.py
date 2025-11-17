@@ -373,7 +373,7 @@ elif selected_agent == "OPSI (Operations)":
     st.markdown("---")
 
     with st.expander("➕ Create New Task"):
-    with st.form("new_task_form"):
+        with st.form("new_task_form"):
 
         title = st.text_input("Task Title*")
 
@@ -451,6 +451,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
 
 
