@@ -497,7 +497,6 @@ elif selected_page == "Manage Tasks":
                     if result:
                         st.success("✅ Task created successfully!")
                         st.cache_data.clear()
-                        st.rerun()
     
     # ========================================
     # UPDATE TASK SECTION
@@ -557,6 +556,7 @@ elif selected_page == "Manage Tasks":
                     
                     with col1:
                         st.markdown("**Current Details:**")
+                        st.write(f"**Task Type:** {task_row.get('Task Type', 'N/A')}")
                         st.write(f"**Title:** {task_row[task_title_col]}")
                         st.write(f"**Status:** {task_row[status_col]}")
                         st.write(f"**Priority:** {task_row[priority_col]}")
@@ -656,7 +656,6 @@ elif selected_page == "Manage Tasks":
                                 # Clear search on successful update
                                 st.session_state.task_id_search = ""
                                 st.cache_data.clear()
-                                st.rerun()
                             else:
                                 st.error("❌ Failed to update task")
             else:
