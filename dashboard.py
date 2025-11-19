@@ -516,7 +516,10 @@ elif selected_page == "Manage Tasks":
         st.success(st.session_state.update_success_msg)
         del st.session_state.update_success_msg
     
-    with st.expander("✏️ Update Task", expanded=False):
+    # Keep expander open if search is active
+    is_expanded = st.session_state.get('task_id_search', '') != ''
+    
+    with st.expander("✏️ Update Task", expanded=is_expanded):
         st.markdown("**Select a task to update**")
         
         # Initialize session state for search
