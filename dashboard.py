@@ -76,11 +76,21 @@ with st.sidebar:
     st.markdown("---")
     
     st.markdown("### 🧭 Navigation")
+    
+    # Initialize session state for page selection
+    if 'selected_page' not in st.session_state:
+        st.session_state.selected_page = "Dashboard Overview"
+    
     selected_page = st.radio(
         "Select View:",
         ["Dashboard Overview", "Approve Leads", "Manage Tasks"],
+        index=["Dashboard Overview", "Approve Leads", "Manage Tasks"].index(st.session_state.selected_page),
         label_visibility="collapsed"
     )
+    
+    # Update session state when radio changes
+    if selected_page != st.session_state.selected_page:
+        st.session_state.selected_page = selected_page
     
     st.markdown("---")
     st.markdown("### 📊 System Status")
@@ -117,7 +127,7 @@ st.markdown("---")
 # PAGE ROUTING
 # ========================================
 
-if selected_page == "Dashboard Overview":
+if st.session_state.selected_page == "Dashboard Overview":
     # ========================================
     # DASHBOARD OVERVIEW PAGE
     # ========================================
@@ -225,21 +235,10 @@ if selected_page == "Dashboard Overview":
                             st.caption(f"⏰ Deadline: {task.get('Deadline Date', 'N/A')} | 👤 {task.get('Assigned To', 'N/A')}")
                         
                         with col_b:
-                            # Quick status update button
-                            if st.button("▶️ Start", key=f"quick_start_{idx}", help="Mark as In Progress", use_container_width=True):
-                                task_id = task.get(task_id_col, '')
-                                if task_id:
-                                    update_data = {
-                                        "taskId": task_id,
-                                        "status": "In Progress",
-                                        "priority": task.get(priority_col, ''),
-                                        "notes": task.get('Notes', '')
-                                    }
-                                    result = update_opsi_task(update_data)
-                                    if result:
-                                        st.success("✅ Started!")
-                                        st.cache_data.clear()
-                                        st.rerun()
+                            # Navigate to Manage Tasks button
+                            if st.button("▶️ Start", key=f"quick_start_{idx}", help="Go to Manage Tasks", use_container_width=True):
+                                st.session_state.selected_page = "Manage Tasks"
+                                st.rerun()
                         
                         st.divider()
             else:
@@ -247,7 +246,7 @@ if selected_page == "Dashboard Overview":
         else:
             st.info("No tasks available")
 
-elif selected_page == "Approve Leads":
+elif st.session_state.selected_page == "Approve Leads":
     # ========================================
     # APPROVE LEADS PAGE
     # ========================================
@@ -406,7 +405,7 @@ elif selected_page == "Approve Leads":
         else:
             st.info("No leads match your search criteria.")
 
-elif selected_page == "Manage Tasks":
+elif st.session_state.selected_page == "Manage Tasks":
     # ========================================
     # MANAGE TASKS PAGE (OPSI)
     # ========================================
