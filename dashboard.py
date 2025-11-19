@@ -566,34 +566,41 @@ elif selected_page == "Manage Tasks":
                     with col2:
                         st.markdown("**Update:**")
                         
+                        # Initialize session state for form fields
+                        if f'form_title_{selected_task_id}' not in st.session_state:
+                            st.session_state[f'form_title_{selected_task_id}'] = task_row[task_title_col]
+                        if f'form_assigned_{selected_task_id}' not in st.session_state:
+                            st.session_state[f'form_assigned_{selected_task_id}'] = task_row.get('Assigned To', '')
+                        if f'form_deadline_{selected_task_id}' not in st.session_state:
+                            current_deadline = task_row.get('Deadline Date', '')
+                            if current_deadline and current_deadline != 'N/A':
+                                try:
+                                    import datetime as dt
+                                    st.session_state[f'form_deadline_{selected_task_id}'] = dt.datetime.strptime(str(current_deadline), '%Y-%m-%d').date()
+                                except:
+                                    st.session_state[f'form_deadline_{selected_task_id}'] = dt.date.today()
+                            else:
+                                import datetime as dt
+                                st.session_state[f'form_deadline_{selected_task_id}'] = dt.date.today()
+                        
                         # Title input
                         new_title = st.text_input(
                             "Title:",
-                            value=task_row[task_title_col],
+                            value=st.session_state[f'form_title_{selected_task_id}'],
                             key=f"new_title_{selected_task_id}"
                         )
                         
                         # Assigned To input
                         new_assigned_to = st.text_input(
                             "Assigned To:",
-                            value=task_row.get('Assigned To', ''),
+                            value=st.session_state[f'form_assigned_{selected_task_id}'],
                             key=f"new_assigned_to_{selected_task_id}"
                         )
                         
                         # Deadline input
-                        import datetime as dt
-                        current_deadline = task_row.get('Deadline Date', '')
-                        if current_deadline and current_deadline != 'N/A':
-                            try:
-                                deadline_value = dt.datetime.strptime(str(current_deadline), '%Y-%m-%d').date()
-                            except:
-                                deadline_value = dt.date.today()
-                        else:
-                            deadline_value = dt.date.today()
-                        
                         new_deadline = st.date_input(
                             "Deadline:",
-                            value=deadline_value,
+                            value=st.session_state[f'form_deadline_{selected_task_id}'],
                             key=f"new_deadline_{selected_task_id}"
                         )
                         
@@ -632,6 +639,7 @@ elif selected_page == "Manage Tasks":
                         if st.button("💾 Update Task", type="primary", use_container_width=True, key=f"update_btn_{selected_task_id}"):
                             update_data = {
                                 "taskId": selected_task_id,
+                                "taskType": task_row.get('Task Type', 'RFP Submission'),
                                 "title": new_title,
                                 "assignedTo": new_assigned_to,
                                 "deadline": str(new_deadline),
