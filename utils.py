@@ -47,7 +47,8 @@ def load_cora_data():
 
 def send_approved_leads_to_mark(lead_ids):
     """Send approved Lead IDs to MARK webhook"""
-    webhook_url = "https://hackett2k.app.n8n.cloud/webhook/mark-approve-leads"
+    # FIXED: Updated webhook URL to apexxadams
+    webhook_url = "https://apexxadams.app.n8n.cloud/webhook/mark-approve-leads"
     
     payload = {
         "approved_leads": lead_ids,
@@ -56,10 +57,34 @@ def send_approved_leads_to_mark(lead_ids):
     }
     
     try:
-        response = requests.post(webhook_url, json=payload, timeout=10)
-        return response.status_code == 200, response
+        # Increased timeout for processing multiple leads
+        response = requests.post(webhook_url, json=payload, timeout=30)
+        
+        # Check for successful response
+        if response.status_code == 200:
+            try:
+                # Try to parse JSON response from n8n
+                result = response.json()
+                return True, result
+            except:
+                # If no JSON, still consider it success
+                return True, {"message": "Leads approved successfully"}
+        else:
+            # Return error details
+            error_msg = f"HTTP {response.status_code}"
+            try:
+                error_detail = response.json()
+                error_msg = f"{error_msg}: {error_detail}"
+            except:
+                error_msg = f"{error_msg}: {response.text}"
+            return False, error_msg
+            
+    except requests.exceptions.Timeout:
+        return False, "Request timed out - workflow may still be processing"
+    except requests.exceptions.ConnectionError:
+        return False, "Connection failed - check webhook URL and n8n status"
     except Exception as e:
-        return False, str(e)
+        return False, f"Error: {str(e)}"
 
 # ========================================
 # OPSI DATA FUNCTIONS
@@ -83,7 +108,7 @@ def load_opsi_data():
 
 def send_opsi_task(task_data):
     """Send new OPSI task to n8n webhook"""
-    webhook_url = "https://hackett2k.app.n8n.cloud/webhook/opsi-create-task"
+    webhook_url = "https://apexxadams.app.n8n.cloud/webhook/opsi-create-task"
     
     try:
         response = requests.post(webhook_url, json=task_data, timeout=10)
@@ -98,22 +123,7 @@ def send_opsi_task(task_data):
 
 def update_opsi_task(update_data):
     """Update existing OPSI task via n8n webhook"""
-    webhook_url = "https://hackett2k.app.n8n.cloud/webhook/opsi-update-task"
-    
-    try:
-        response = requests.post(webhook_url, json=update_data, timeout=10)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            st.error(f"❌ OPSI update webhook error: {response.status_code}")
-            return None
-    except Exception as e:
-        st.error(f"❌ Error updating OPSI task: {e}")
-        return None
-
-def update_opsi_task(update_data):
-    """Update existing OPSI task via n8n webhook"""
-    webhook_url = "https://hackett2k.app.n8n.cloud/webhook/opsi-update-task"
+    webhook_url = "https://apexxadams.app.n8n.cloud/webhook/opsi-update-task"
     
     try:
         response = requests.post(webhook_url, json=update_data, timeout=10)
