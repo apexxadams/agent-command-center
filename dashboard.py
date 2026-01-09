@@ -469,6 +469,12 @@ elif st.session_state.selected_page == "Manage Tasks":
     # ========================================
     # CREATE TASK
     # ========================================
+    
+    # Show success message if it exists in session state
+    if 'create_success_msg' in st.session_state:
+        st.success(st.session_state.create_success_msg)
+        del st.session_state.create_success_msg
+    
     with st.expander("➕ Create New Task", expanded=False):
         with st.form("task_form"):
             
@@ -516,10 +522,14 @@ elif st.session_state.selected_page == "Manage Tasks":
                         "priority": priority,
                         "notes": notes,
                     }
-                    result = send_opsi_task(task_data)
+                    
+                    # Show processing message
+                    with st.spinner("Creating task..."):
+                        result = send_opsi_task(task_data)
                     
                     if result:
-                        st.success("✅ Task created successfully!")
+                        # Store success message in session state before rerun
+                        st.session_state.create_success_msg = f"✅ Task '{title}' created successfully!"
                         st.cache_data.clear()
                         st.markdown("""
                         <script>
@@ -527,6 +537,8 @@ elif st.session_state.selected_page == "Manage Tasks":
                         </script>
                         """, unsafe_allow_html=True)
                         st.rerun()
+                    else:
+                        st.error("❌ Failed to create task. Check that the OPSI webhook is running in n8n.")
     
     # ========================================
     # UPDATE TASK SECTION
@@ -742,5 +754,3 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-
-
