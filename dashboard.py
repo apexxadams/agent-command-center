@@ -549,8 +549,9 @@ elif st.session_state.selected_page == "Manage Tasks":
         st.success(st.session_state.update_success_msg)
         del st.session_state.update_success_msg
     
-    # Keep expander open if search is active
-    is_expanded = st.session_state.get('task_id_search', '') != ''
+    # Keep expander open if search is active OR task is selected
+    is_expanded = (st.session_state.get('task_id_search', '') != '' or 
+                   st.session_state.get('selected_task_id') is not None)
     
     with st.expander("✏️ Update Task", expanded=is_expanded):
         st.markdown("**Select a task to update**")
@@ -585,14 +586,26 @@ elif st.session_state.selected_page == "Manage Tasks":
                     for _, row in filtered_opsi_df.iterrows()
                 }
                 
+                # Initialize selected task in session state
+                if 'selected_task_id' not in st.session_state:
+                    st.session_state.selected_task_id = None
+                
+                # Get the current index for the selectbox
+                current_index = 0
+                task_ids = list(task_options.values())
+                if st.session_state.selected_task_id in task_ids:
+                    current_index = task_ids.index(st.session_state.selected_task_id)
+                
                 selected_task_label = st.selectbox(
                     "Select Task:",
                     options=list(task_options.keys()),
-                    key=f"task_selector_{len(task_options)}"
+                    index=current_index,
+                    key="task_selector_fixed"
                 )
                 
                 if selected_task_label:
                     selected_task_id = task_options[selected_task_label]
+                    st.session_state.selected_task_id = selected_task_id
                     
                     # Get current task details
                     task_row = opsi_df[opsi_df[task_id_col] == selected_task_id].iloc[0]
@@ -698,8 +711,9 @@ elif st.session_state.selected_page == "Manage Tasks":
                             if result:
                                 # Store success message in session state before rerun
                                 st.session_state.update_success_msg = f"✅ Task {selected_task_id} updated successfully!"
-                                # Clear search on successful update
+                                # Clear search and selection on successful update
                                 st.session_state.task_id_search = ""
+                                st.session_state.selected_task_id = None
                                 st.cache_data.clear()
                                 st.markdown("""
                                 <script>
